@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NexaShoe — Support</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #080b12;
+    --s1:       #0d1117;
+    --s2:       #111720;
+    --card:     #141b26;
+    --border:   #1e2a3a;
+    --border2:  #253347;
+    --accent:   #00d4ff;
+    --accent2:  #ff4d6d;
+    --accent3:  #00e676;
+    --accent4:  #ffab40;
+    --text:     #e0e8f0;
+    --muted:    #5a6a80;
+    --mono:     'JetBrains Mono', monospace;
+    --r:        16px;
+  }
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  /* grid noise texture */
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(0,212,255,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events:none;
+  }
+
+  /* glow orbs */
+  .orb { position:fixed; border-radius:50%; pointer-events:none; }
+  .orb1 { width:500px;height:500px; background:radial-gradient(circle,rgba(0,212,255,.07) 0%,transparent 70%); top:-150px;left:-100px; }
+  .orb2 { width:400px;height:400px; background:radial-gradient(circle,rgba(255,77,109,.05) 0%,transparent 70%); bottom:-100px;right:-50px; }
+
+  /* ── shell ── */
+  .shell {
+    position:relative;
+    width: min(460px, 96vw);
+    height: min(840px, 96vh);
+    display:flex; flex-direction:column;
+    background: var(--s1);
+    border-radius: 24px;
+    border: 1px solid var(--border);
+    box-shadow: 0 24px 80px rgba(0,0,0,.7), 0 0 0 1px rgba(0,212,255,.06);
+    overflow:hidden;
+    animation: shellIn .5s cubic-bezier(.34,1.56,.64,1) both;
+  }
+  @keyframes shellIn {
+    from { opacity:0; transform:translateY(24px) scale(.96); }
+    to   { opacity:1; transform:none; }
+  }
+
+  /* ── header ── */
+  .header {
+    flex-shrink:0;
+    padding:18px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--s2);
+    display:flex; align-items:center; gap:14px;
+  }
+  .hlogo {
+    width:44px;height:44px; border-radius:12px;
+    background: linear-gradient(135deg,#00d4ff,#0050ff);
+    display:flex;align-items:center;justify-content:center;
+    font-size:22px;
+    box-shadow: 0 4px 20px rgba(0,212,255,.35);
+    flex-shrink:0;
+  }
+  .hinfo h1 { font-size:16px;font-weight:700;letter-spacing:-.2px; }
+  .hinfo p  { font-size:11.5px;color:var(--muted);margin-top:1px; }
+  .hpill {
+    margin-left:auto;
+    display:flex;align-items:center;gap:5px;
+    font-size:11px;font-weight:600;color:var(--accent3);
+    background:rgba(0,230,118,.08);
+    border:1px solid rgba(0,230,118,.2);
+    border-radius:20px;padding:4px 10px;
+  }
+  .hpill-dot { width:7px;height:7px;border-radius:50%;background:var(--accent3);animation:blink 1.8s infinite; }
+  @keyframes blink { 0%,100%{opacity:1}50%{opacity:.35} }
+
+  /* ── intent sniff bar ── */
+  .intent-bar {
+    flex-shrink:0;
+    background: var(--card);
+    border-bottom:1px solid var(--border);
+    padding:10px 16px;
+    display:flex;align-items:center;gap:10px;
+  }
+  .intent-bar label { font-size:11px;color:var(--muted);font-weight:500; flex-shrink:0; }
+  .intent-input {
+    flex:1;
+    background: var(--s2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    color:var(--text);
+    font-family:'Outfit',sans-serif;
+    font-size:13px;
+    padding:7px 12px;
+    outline:none;
+    transition:border-color .2s;
+  }
+  .intent-input:focus { border-color:var(--accent); }
+  .intent-input::placeholder { color:var(--muted); }
+  .detect-btn {
+    background:rgba(0,212,255,.12);
+    border:1px solid rgba(0,212,255,.25);
+    color:var(--accent);
+    font-family:'Outfit',sans-serif;
+    font-size:12px;font-weight:600;
+    padding:7px 14px;border-radius:8px;cursor:pointer;
+    transition:all .2s;white-space:nowrap;
+  }
+  .detect-btn:hover { background:rgba(0,212,255,.2); }
+
+  /* ── chat area ── */
+  .chat-area {
+    flex:1; overflow-y:auto;
+    padding:16px 14px;
+    display:flex; flex-direction:column; gap:12px;
+    scroll-behavior:smooth;
+  }
+  .chat-area::-webkit-scrollbar { width:3px; }
+  .chat-area::-webkit-scrollbar-thumb { background:var(--border2);border-radius:3px; }
+
+  /* ── messages ── */
+  .mwrap { display:flex;flex-direction:column;animation:msgIn .28s cubic-bezier(.34,1.56,.64,1) both; }
+  @keyframes msgIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+  .mwrap.user { align-items:flex-end; }
+  .mwrap.bot  { align-items:flex-start; }
+
+  .bubble {
+    max-width:82%;
+    padding:11px 15px;
+    font-size:13.5px;line-height:1.55;
+    position:relative;
+  }
+  .mwrap.bot  .bubble { background:var(--card);border:1px solid var(--border);border-radius:var(--r) var(--r) var(--r) 4px; }
+  .mwrap.user .bubble { background:rgba(0,80,255,.2);border:1px solid rgba(0,212,255,.2);border-radius:var(--r) var(--r) 4px var(--r);color:#b8d4ff; }
+  .bubble b { color:var(--text); font-weight:600; }
+
+  .mmeta { font-size:10px;color:var(--muted);margin-top:4px; }
+
+  /* ── intent badge ── */
+  .ibadge {
+    display:inline-flex;align-items:center;gap:4px;
+    font-size:9.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+    padding:2px 8px;border-radius:20px;margin-left:6px;
+  }
+  .ib-buy       {background:rgba(0,230,118,.1);color:#00e676;border:1px solid rgba(0,230,118,.2);}
+  .ib-track     {background:rgba(0,212,255,.1);color:#00d4ff;border:1px solid rgba(0,212,255,.2);}
+  .ib-cancel    {background:rgba(255,77,109,.1);color:#ff4d6d;border:1px solid rgba(255,77,109,.2);}
+  .ib-return    {background:rgba(255,171,64,.1);color:#ffab40;border:1px solid rgba(255,171,64,.2);}
+  .ib-complaint {background:rgba(255,77,109,.1);color:#ff4d6d;border:1px solid rgba(255,77,109,.2);}
+  .ib-feedback  {background:rgba(0,212,255,.1);color:#00d4ff;border:1px solid rgba(0,212,255,.2);}
+  .ib-call      {background:rgba(0,230,118,.1);color:#00e676;border:1px solid rgba(0,230,118,.2);}
+
+  /* ── typing ── */
+  .typing-dots { display:flex;gap:4px;align-items:center;padding:2px; }
+  .td { width:7px;height:7px;border-radius:50%;background:var(--muted);animation:tdot 1.2s ease infinite; }
+  .td:nth-child(2){animation-delay:.18s} .td:nth-child(3){animation-delay:.36s}
+  @keyframes tdot { 0%,80%,100%{transform:scale(1);opacity:.4} 40%{transform:scale(1.3);opacity:1} }
+
+  /* ── option buttons ── */
+  .opts-wrap { display:flex;flex-wrap:wrap;gap:7px;margin-top:4px; }
+  .opt-btn {
+    display:flex;align-items:center;gap:6px;
+    font-family:'Outfit',sans-serif;
+    font-size:12.5px;font-weight:500;
+    padding:8px 14px;border-radius:10px;
+    border:1px solid var(--border2);
+    background:var(--card);color:var(--text);
+    cursor:pointer;transition:all .18s;
+  }
+  .opt-btn:hover {
+    border-color:var(--accent);
+    background:rgba(0,212,255,.1);
+    color:var(--accent);
+    transform:translateY(-2px);
+    box-shadow:0 4px 14px rgba(0,212,255,.15);
+  }
+  .opt-btn.confirm-yes { border-color:rgba(255,77,109,.3);color:#ff4d6d;background:rgba(255,77,109,.08); }
+  .opt-btn.confirm-no  { border-color:rgba(0,230,118,.3);color:#00e676;background:rgba(0,230,118,.08); }
+  .opt-btn.confirm-yes:hover { background:rgba(255,77,109,.2); }
+  .opt-btn.confirm-no:hover  { background:rgba(0,230,118,.2); }
+
+  /* ── text input row ── */
+  .input-row { display:flex;gap:8px;align-items:flex-end;margin-top:6px; }
+  .flow-input {
+    flex:1;
+    background:var(--s2);
+    border:1px solid var(--border);
+    border-radius:10px;
+    color:var(--text);
+    font-family:'Outfit',sans-serif;font-size:13px;
+    padding:9px 13px;outline:none;transition:border-color .2s;
+  }
+  .flow-input:focus { border-color:var(--accent); }
+  .flow-input::placeholder { color:var(--muted); }
+  .flow-submit {
+    background:linear-gradient(135deg,#00d4ff,#0050ff);
+    border:none;border-radius:10px;
+    color:#fff;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;
+    padding:9px 16px;cursor:pointer;
+    transition:transform .15s,box-shadow .15s;
+    white-space:nowrap;
+  }
+  .flow-submit:hover { transform:scale(1.04);box-shadow:0 4px 18px rgba(0,212,255,.4); }
+  .skip-btn {
+    background:transparent;border:1px solid var(--border2);
+    border-radius:10px;color:var(--muted);font-family:'Outfit',sans-serif;
+    font-size:12px;padding:9px 12px;cursor:pointer;transition:all .18s;
+  }
+  .skip-btn:hover { border-color:var(--muted);color:var(--text); }
+
+  /* ── image upload ── */
+  .upload-area {
+    border:2px dashed var(--border2);
+    border-radius:12px;padding:20px;text-align:center;
+    cursor:pointer;transition:border-color .2s;margin-top:6px;
+    background:var(--card);
+  }
+  .upload-area:hover { border-color:var(--accent); }
+  .upload-area .u-icon { font-size:28px;margin-bottom:8px; }
+  .upload-area p { font-size:12.5px;color:var(--muted); }
+  .upload-area input { display:none; }
+  .upload-skip {
+    background:transparent;border:1px solid var(--border2);
+    border-radius:8px;color:var(--muted);font-family:'Outfit',sans-serif;
+    font-size:12px;padding:7px 14px;cursor:pointer;margin-top:8px;transition:all .18s;
+  }
+  .upload-skip:hover { color:var(--text);border-color:var(--muted); }
+
+  /* ── rating widget ── */
+  .rating-wrap { display:flex;gap:8px;margin-top:8px;align-items:center; }
+  .star-btn {
+    font-size:26px;cursor:pointer;
+    transition:transform .15s;
+    filter:grayscale(1);opacity:.4;
+  }
+  .star-btn:hover, .star-btn.active { filter:grayscale(0);opacity:1;transform:scale(1.15); }
+
+  /* ── order status card ── */
+  .order-card {
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:12px;padding:16px;margin-top:6px;
+  }
+  .oc-header { display:flex;align-items:center;gap:10px;margin-bottom:12px; }
+  .oc-status-icon { font-size:28px; }
+  .oc-status-label { font-size:15px;font-weight:700; }
+  .oc-status-msg   { font-size:12px;color:var(--muted);margin-top:2px; }
+  .oc-row { display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border); }
+  .oc-row:last-child { border-bottom:none; }
+  .oc-key { font-size:11.5px;color:var(--muted); }
+  .oc-val { font-size:12.5px;font-weight:500;text-align:right;max-width:60%; }
+  .status-pill-inline {
+    display:inline-block;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+    padding:3px 9px;border-radius:20px;
+  }
+  .sp-processing     {background:rgba(255,171,64,.12);color:#ffab40;}
+  .sp-shipped        {background:rgba(0,212,255,.12);color:#00d4ff;}
+  .sp-out_for_delivery{background:rgba(0,212,255,.12);color:#00d4ff;}
+  .sp-delivered      {background:rgba(0,230,118,.12);color:#00e676;}
+  .sp-cancelled      {background:rgba(255,77,109,.12);color:#ff4d6d;}
+  .sp-returned       {background:rgba(255,171,64,.12);color:#ffab40;}
+
+  /* ── product cards ── */
+  .products-wrap { display:flex;flex-direction:column;gap:9px;margin-top:6px; }
+  .product-card {
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:12px;padding:14px 16px;
+    display:flex;align-items:center;gap:14px;
+    transition:border-color .2s;
+  }
+  .product-card:hover { border-color:var(--accent); }
+  .pc-icon { font-size:28px;flex-shrink:0; }
+  .pc-info { flex:1; }
+  .pc-name  { font-size:13.5px;font-weight:600; }
+  .pc-meta  { font-size:11.5px;color:var(--muted);margin-top:2px; }
+  .pc-price { font-size:14px;font-weight:700;color:var(--accent3);margin-top:4px; }
+  .pc-btn {
+    background:linear-gradient(135deg,#00d4ff,#0050ff);
+    color:#fff;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;
+    padding:7px 14px;border-radius:8px;border:none;cursor:pointer;
+    text-decoration:none;display:block;text-align:center;
+    transition:transform .15s;flex-shrink:0;
+  }
+  .pc-btn:hover { transform:scale(1.04); }
+
+  /* ── done card ── */
+  .done-card {
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:12px;padding:18px 16px;
+    text-align:center;margin-top:4px;
+  }
+  .done-card.error { border-color:rgba(255,77,109,.3);background:rgba(255,77,109,.05); }
+  .done-card .dc-icon { font-size:30px;margin-bottom:10px; }
+
+  /* ── welcome ── */
+  .welcome-card {
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:16px;padding:22px 18px;text-align:center;
+  }
+  .wc-icon { font-size:36px;margin-bottom:10px; }
+  .wc-title { font-size:17px;font-weight:700;letter-spacing:-.3px;margin-bottom:6px; }
+  .wc-sub   { font-size:12.5px;color:var(--muted);line-height:1.5; }
+  .wc-btns  { display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px; }
+  .wc-btn {
+    display:flex;align-items:center;gap:8px;
+    font-family:'Outfit',sans-serif;font-size:12.5px;font-weight:600;
+    padding:11px 14px;border-radius:10px;
+    border:1px solid var(--border2);background:var(--s2);color:var(--text);
+    cursor:pointer;transition:all .18s;text-align:left;
+  }
+  .wc-btn:hover {
+    border-color:var(--accent);background:rgba(0,212,255,.08);
+    color:var(--accent);transform:translateY(-1px);
+  }
+  .wc-btn .bi { font-size:18px; }
+
+  /* ── footer ── */
+  .footer {
+    flex-shrink:0;
+    padding:10px 16px;
+    border-top:1px solid var(--border);
+    display:flex;justify-content:center;align-items:center;gap:6px;
+    background:var(--s2);
+  }
+  .footer a { font-size:11.5px;color:var(--muted);text-decoration:none;display:flex;align-items:center;gap:4px;transition:color .2s; }
+  .footer a:hover { color:var(--accent); }
+  .footer-sep { color:var(--border2);font-size:12px; }
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<div class="shell">
+  <!-- Header -->
+  <div class="header">
+    <div class="hlogo">👟</div>
+    <div class="hinfo">
+      <h1>NexaShoe Support</h1>
+      <p>AI-powered customer assistant</p>
+    </div>
+    <div class="hpill"><div class="hpill-dot"></div>Online</div>
+  </div>
+
+  <!-- Intent text bar -->
+  <div class="intent-bar">
+    <label>🧠 ML:</label>
+    <input class="intent-input" id="intentInput" placeholder="Or type your query to auto-detect intent…" />
+    <button class="detect-btn" onclick="detectIntent()">Detect →</button>
+  </div>
+
+  <!-- Chat -->
+  <div class="chat-area" id="chatArea"></div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <a href="/admin-dashboard">⚙ Admin</a>
+    <span class="footer-sep">·</span>
+    <a href="/" onclick="location.reload();return false;">↺ New Chat</a>
+  </div>
+</div>
+
+<script>
+  const chatArea = document.getElementById('chatArea');
+  let SID = 'sess_' + Math.random().toString(36).slice(2,9);
+  let isTyping = false;
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+  const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const md  = s => esc(s).replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>');
+  const now = () => new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  const scroll = () => { chatArea.scrollTop = chatArea.scrollHeight; };
+
+  function appendWrap(cls) {
+    const w = document.createElement('div');
+    w.className = `mwrap ${cls}`;
+    chatArea.appendChild(w);
+    scroll();
+    return w;
+  }
+
+  function botBubble(html, meta='') {
+    const w = appendWrap('bot');
+    w.innerHTML = `<div class="bubble">${html}</div><div class="mmeta">${now()}${meta}</div>`;
+    scroll();
+    return w;
+  }
+  function userBubble(text) {
+    const w = appendWrap('user');
+    w.innerHTML = `<div class="bubble">${esc(text)}</div><div class="mmeta">${now()}</div>`;
+    scroll();
+  }
+
+  function showTyping() {
+    removeTyping();
+    const w = appendWrap('bot');
+    w.id = 'typingWrap';
+    w.innerHTML = `<div class="bubble"><div class="typing-dots"><div class="td"></div><div class="td"></div><div class="td"></div></div></div>`;
+    scroll();
+  }
+  function removeTyping() {
+    const el = document.getElementById('typingWrap');
+    if (el) el.remove();
+  }
+
+  function ibadge(intent) {
+    return `<span class="ibadge ib-${intent}">${intent}</span>`;
+  }
+
+  // ── Render flow responses ─────────────────────────────────────────────────
+  function renderResponse(data, detectedIntent) {
+    removeTyping();
+    const intentMeta = detectedIntent ? ibadge(detectedIntent) : '';
+
+    if (data.type === 'buttons') {
+      const opts = (data.options||[]).map(o =>
+        `<button class="opt-btn" onclick="sendFlow('${esc(o.label)}')">${o.icon?o.icon+' ':''}${esc(o.label)}</button>`
+      ).join('');
+      botBubble(`${md(data.message)}<div class="opts-wrap">${opts}</div>`, intentMeta);
+      _state = data;
+    }
+    else if (data.type === 'text_input') {
+      const skipBtn = data.skippable
+        ? `<button class="skip-btn" onclick="submitInput('skip')">Skip</button>` : '';
+      const wrap = botBubble(
+        `${md(data.message)}<div class="input-row">
+          <input class="flow-input" id="flowInput" placeholder="${esc(data.placeholder||'')}" onkeydown="if(event.key==='Enter')submitInput()">
+          <button class="flow-submit" onclick="submitInput()">Submit</button>
+          ${skipBtn}
+        </div>`, intentMeta
+      );
+      setTimeout(() => document.getElementById('flowInput')?.focus(), 100);
+      _state = data;
+    }
+    else if (data.type === 'confirm') {
+      const opts = (data.options||[]).map(o =>
+        `<button class="opt-btn ${o.value==='yes'?'confirm-yes':'confirm-no'}" onclick="sendFlow('${esc(o.value)}')">${o.icon||''} ${esc(o.label)}</button>`
+      ).join('');
+      botBubble(`${md(data.message)}<div class="opts-wrap">${opts}</div>`, intentMeta);
+      _state = data;
+    }
+    else if (data.type === 'image_upload') {
+      botBubble(`${md(data.message)}
+        <div class="upload-area" onclick="document.getElementById('imgFile').click()">
+          <input type="file" id="imgFile" accept="image/*" onchange="handleImgUpload(event)">
+          <div class="u-icon">📷</div>
+          <p>Tap to upload an image (optional)</p>
+        </div>
+        <div style="text-align:center">
+          <button class="upload-skip" onclick="sendFlow(null)">Skip — no image</button>
+        </div>`, intentMeta);
+      _state = data;
+    }
+    else if (data.type === 'rating') {
+      botBubble(`${md(data.message)}
+        <div class="rating-wrap" id="starWrap">
+          ${[1,2,3,4,5].map(n=>`<span class="star-btn" data-v="${n}" onclick="pickRating(${n})">⭐</span>`).join('')}
+        </div>`, intentMeta);
+      _state = data;
+    }
+    else if (data.type === 'order_status') {
+      const o = data.order;
+      const spClass = `sp-${o.status_raw}`;
+      botBubble(`${md(data.message)}
+        <div class="order-card">
+          <div class="oc-header">
+            <div class="oc-status-icon">${o.status_icon}</div>
+            <div>
+              <div class="oc-status-label">${esc(o.status_label)}</div>
+              <div class="oc-status-msg">${esc(o.status_msg)}</div>
+            </div>
+          </div>
+          <div class="oc-row"><span class="oc-key">Order ID</span><span class="oc-val" style="font-family:var(--mono);font-size:11px">${esc(o.order_id)}</span></div>
+          <div class="oc-row"><span class="oc-key">Product</span><span class="oc-val">${esc(o.product)}</span></div>
+          <div class="oc-row"><span class="oc-key">Status</span><span class="oc-val"><span class="status-pill-inline ${spClass}">${esc(o.status_label)}</span></span></div>
+          <div class="oc-row"><span class="oc-key">Location</span><span class="oc-val">${esc(o.location||'—')}</span></div>
+          <div class="oc-row"><span class="oc-key">Est. Delivery</span><span class="oc-val">${esc(o.delivery_date||'—')}</span></div>
+        </div>`, intentMeta);
+      _state = data;
+    }
+    else if (data.type === 'products') {
+      const cards = (data.products||[]).map(p => `
+        <div class="product-card">
+          <div class="pc-icon">👟</div>
+          <div class="pc-info">
+            <div class="pc-name">${esc(p.name)}</div>
+            <div class="pc-meta">${esc(p.brand)} · ${esc(p.type)} · ${esc(p.size)}</div>
+            <div class="pc-price">${esc(p.price)}</div>
+          </div>
+          <a href="${esc(p.link)}" target="_blank" class="pc-btn">Buy →</a>
+        </div>`
+      ).join('');
+      botBubble(`${md(data.message)}<div class="products-wrap">${cards}</div>`, intentMeta);
+      _state = data;
+    }
+    else if (data.type === 'done') {
+      const cls = data.error ? 'done-card error' : 'done-card';
+      const icon = data.error ? '❌' : '✅';
+      botBubble(`<div class="${cls}"><div class="dc-icon">${icon}</div>${md(data.message)}</div>
+        <div class="opts-wrap" style="margin-top:10px">
+          <button class="opt-btn" onclick="restart()">🏠 Main Menu</button>
+        </div>`, intentMeta);
+      _state = null;
+    }
+  }
+
+  // ── State machine ─────────────────────────────────────────────────────────
+  let _state = null;
+
+  async function sendFlow(selection) {
+    if (!_state) return;
+    const text = selection !== null ? String(selection) : '(no image)';
+    userBubble(text);
+    showTyping();
+
+    const payload = {
+      session_id: SID,
+      flow:       _state.flow,
+      step:       _state.step,
+      selection:  selection,
+      data:       _state.data || {},
+    };
+
+    try {
+      const r  = await fetch('/flow', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+      const d  = await r.json();
+      renderResponse(d);
+    } catch(e) {
+      removeTyping();
+      botBubble('⚠️ Connection error. Please try again.');
+    }
+  }
+
+  function submitInput(override) {
+    const el = document.getElementById('flowInput');
+    const val = override || (el ? el.value.trim() : '');
+    if (!val) return;
+    sendFlow(val);
+  }
+
+  function pickRating(n) {
+    document.querySelectorAll('.star-btn').forEach((s,i) => {
+      s.classList.toggle('active', i < n);
+    });
+    setTimeout(() => sendFlow(String(n)), 300);
+  }
+
+  async function handleImgUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('image', file);
+    showTyping();
+    try {
+      const r = await fetch('/upload-image', { method:'POST', body:fd });
+      const d = await r.json();
+      removeTyping();
+      userBubble(`📷 Image uploaded: ${file.name}`);
+      sendFlow(d.path);
+    } catch {
+      removeTyping();
+      botBubble('⚠️ Image upload failed. Skipping.');
+      sendFlow(null);
+    }
+  }
+
+  // ── ML intent detect from text ────────────────────────────────────────────
+  async function detectIntent() {
+    const el  = document.getElementById('intentInput');
+    const msg = el.value.trim();
+    if (!msg) return;
+    el.value = '';
+    userBubble(msg);
+    showTyping();
+    try {
+      const r = await fetch('/chat', { method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ message:msg, session_id:SID }) });
+      const d = await r.json();
+      renderResponse(d, d.detected_intent);
+    } catch {
+      removeTyping();
+      botBubble('⚠️ Error detecting intent.');
+    }
+  }
+
+  document.getElementById('intentInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') detectIntent();
+  });
+
+  // ── Main menu / restart ───────────────────────────────────────────────────
+  function restart() {
+    _state = null;
+    showMainMenu();
+  }
+
+  function showMainMenu() {
+    const MENU = [
+      { label:'Buy Shoes',         flow:'buy',       icon:'🛍️' },
+      { label:'Track Order',       flow:'track',     icon:'🔍' },
+      { label:'Cancel Order',      flow:'cancel',    icon:'❌' },
+      { label:'Return / Refund',   flow:'return',    icon:'↩️' },
+      { label:'File Complaint',    flow:'complaint', icon:'⚠️' },
+      { label:'Give Feedback',     flow:'feedback',  icon:'💬' },
+      { label:'Talk to Agent',     flow:'call',      icon:'📞' },
+    ];
+
+    const btns = MENU.map(m =>
+      `<button class="wc-btn" onclick="startFlow('${m.flow}')"><span class="bi">${m.icon}</span>${m.label}</button>`
+    ).join('');
+
+    botBubble(`<div class="welcome-card">
+      <div class="wc-icon">👋</div>
+      <div class="wc-title">Welcome to NexaShoe Support</div>
+      <div class="wc-sub">Select an option below or type your query above to auto-detect intent.</div>
+      <div class="wc-btns">${btns}</div>
+    </div>`);
+  }
+
+  async function startFlow(flow) {
+    showTyping();
+    _state = { flow, step:0, data:{} };
+    try {
+      const r = await fetch('/flow', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ session_id:SID, flow, step:0, selection:null, data:{} }),
+      });
+      const d = await r.json();
+      renderResponse(d);
+    } catch {
+      removeTyping();
+      botBubble('⚠️ Error starting flow.');
+    }
+  }
+
+  // ── Boot ──────────────────────────────────────────────────────────────────
+  showMainMenu();
+</script>
+</body>
+</html>

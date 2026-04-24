@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NexaShoe — Admin Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:    #080b12;
+    --s1:    #0d1117;
+    --s2:    #111720;
+    --card:  #141b26;
+    --b1:    #1e2a3a;
+    --b2:    #253347;
+    --cyan:  #00d4ff;
+    --red:   #ff4d6d;
+    --green: #00e676;
+    --amber: #ffab40;
+    --purple:#a78bfa;
+    --text:  #e0e8f0;
+    --muted: #5a6a80;
+    --mono:  'JetBrains Mono', monospace;
+  }
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+
+  body { background:var(--bg); color:var(--text); font-family:'Outfit',sans-serif; min-height:100vh; }
+
+  /* grid bg */
+  body::before {
+    content:''; position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(0,212,255,.025) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(0,212,255,.025) 1px,transparent 1px);
+    background-size:48px 48px;
+    pointer-events:none;
+  }
+
+  ::-webkit-scrollbar { width:4px; height:4px; }
+  ::-webkit-scrollbar-thumb { background:var(--b2); border-radius:4px; }
+
+  /* ── Topbar ── */
+  .topbar {
+    position:sticky; top:0; z-index:200;
+    height:58px;
+    background:rgba(8,11,18,.9);
+    backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--b1);
+    display:flex; align-items:center;
+    padding:0 28px; gap:14px;
+  }
+  .tlogo {
+    font-size:18px;font-weight:800;letter-spacing:-.4px;
+    background:linear-gradient(90deg,var(--cyan),#0050ff);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    display:flex;align-items:center;gap:8px;
+  }
+  .tlogo-icon { -webkit-text-fill-color:initial; }
+  .tsep { width:1px;height:22px;background:var(--b2); }
+  .tpage { font-size:12px;color:var(--muted);font-weight:500;letter-spacing:.5px;text-transform:uppercase; }
+  .tright { margin-left:auto;display:flex;align-items:center;gap:10px; }
+  .ts { font-size:11px;color:var(--muted);font-family:var(--mono); }
+
+  .tbtn {
+    background:var(--card);border:1px solid var(--b2);color:var(--text);
+    font-family:'Outfit',sans-serif;font-size:12px;
+    padding:6px 14px;border-radius:8px;cursor:pointer;
+    display:flex;align-items:center;gap:6px;transition:all .2s;
+  }
+  .tbtn:hover { border-color:var(--cyan);color:var(--cyan); }
+  .tlink { font-size:12px;color:var(--muted);text-decoration:none;display:flex;align-items:center;gap:4px;transition:color .2s; }
+  .tlink:hover { color:var(--cyan); }
+
+  /* ── Page ── */
+  .page { max-width:1400px;margin:0 auto;padding:24px 24px 64px; }
+
+  /* ── Section header ── */
+  .sh {
+    font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;
+    color:var(--muted);margin-bottom:14px;
+    display:flex;align-items:center;gap:10px;
+  }
+  .sh::after { content:'';flex:1;height:1px;background:var(--b1); }
+
+  /* ── KPI grid ── */
+  .kgrid { display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:24px; }
+
+  .kcard {
+    background:var(--card);border:1px solid var(--b1);border-radius:14px;
+    padding:20px 18px;position:relative;overflow:hidden;
+    animation:fadeUp .4s ease both;transition:border-color .2s,transform .2s;
+  }
+  .kcard:hover { border-color:var(--b2);transform:translateY(-2px); }
+  .kcard::before { content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:14px 14px 0 0; }
+  .kc-cyan::before  { background:var(--cyan); }
+  .kc-red::before   { background:var(--red); }
+  .kc-green::before { background:var(--green); }
+  .kc-amber::before { background:var(--amber); }
+  .kc-purple::before{ background:var(--purple); }
+
+  .k-icon  { font-size:22px;margin-bottom:10px; }
+  .k-label { font-size:10.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:5px; }
+  .k-value { font-size:34px;font-weight:800;line-height:1; }
+  .kc-cyan   .k-value { color:#5fe8ff; }
+  .kc-red    .k-value { color:var(--red); }
+  .kc-green  .k-value { color:var(--green); }
+  .kc-amber  .k-value { color:var(--amber); }
+  .kc-purple .k-value { color:var(--purple); }
+  .k-sub { font-size:11px;color:var(--muted);margin-top:5px; }
+
+  /* ── generic card ── */
+  .gc {
+    background:var(--card);border:1px solid var(--b1);border-radius:14px;
+    padding:18px;animation:fadeUp .4s ease .08s both;
+  }
+  .gc h3 { font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px; }
+
+  /* ── Charts row ── */
+  .crow3 { display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px; }
+  .crow2 { display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px; }
+  @media(max-width:960px) { .crow3,.crow2 { grid-template-columns:1fr; } }
+  .ch-wrap { position:relative;height:200px; }
+
+  /* ── Cluster grid ── */
+  .cluster-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px; }
+  .cluster-card {
+    background:var(--s2);border:1px solid var(--b1);border-radius:12px;
+    padding:16px;transition:border-color .2s;
+  }
+  .cluster-card:hover { border-color:var(--b2); }
+  .cc-head { display:flex;align-items:center;gap:10px;margin-bottom:10px; }
+  .cc-icon { font-size:26px; }
+  .cc-name { font-size:13px;font-weight:700; }
+  .cc-count { font-size:26px;font-weight:800;color:var(--cyan);margin-bottom:4px; }
+  .cc-sub  { font-size:11px;color:var(--muted); }
+  .cc-samples { margin-top:10px;border-top:1px solid var(--b1);padding-top:10px; }
+  .cc-sample { font-size:11px;color:var(--muted);padding:3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+
+  /* ── Churn risk bars ── */
+  .churn-row { display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:4px; }
+  @media(max-width:700px) { .churn-row { grid-template-columns:1fr; } }
+  .churn-seg { display:flex;flex-direction:column;gap:6px; }
+  .cs-head { display:flex;justify-content:space-between;align-items:center; }
+  .cs-label { font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.7px; }
+  .cs-count { font-size:13px;font-weight:700; }
+  .cs-bar { height:9px;background:var(--b1);border-radius:5px;overflow:hidden; }
+  .cs-fill { height:100%;border-radius:5px;transition:width 1s cubic-bezier(.34,1.56,.64,1); }
+  .cf-low    { background:var(--green); }
+  .cf-medium { background:var(--amber); }
+  .cf-high   { background:var(--red); }
+  .cs-pct { font-size:10px;color:var(--muted); }
+
+  /* ── Insights ── */
+  .insight-list { display:flex;flex-direction:column;gap:8px; }
+  .insight-item {
+    background:var(--s2);border:1px solid var(--b1);border-radius:10px;
+    padding:12px 14px;font-size:12.5px;line-height:1.55;
+    animation:fadeUp .3s ease both;
+  }
+  .insight-item.alert { border-color:rgba(255,77,109,.3);background:rgba(255,77,109,.06); }
+
+  .rec-list { display:flex;flex-direction:column;gap:7px;margin-top:4px; }
+  .rec-item {
+    background:var(--s2);border:1px solid var(--b1);border-left:3px solid var(--cyan);
+    border-radius:0 10px 10px 0;padding:10px 14px;font-size:12.5px;
+  }
+
+  /* ── Tables ── */
+  table { width:100%;border-collapse:collapse;font-size:12px; }
+  thead th { text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);
+    padding:0 10px 10px;border-bottom:1px solid var(--b1);font-weight:500; }
+  tbody tr:hover { background:rgba(255,255,255,.02); }
+  tbody td { padding:8px 10px;border-bottom:1px solid var(--b1);vertical-align:top; }
+  tbody tr:last-child td { border-bottom:none; }
+  .cell-trunc { max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted); }
+  .tmono { font-family:var(--mono);font-size:10px;color:var(--muted); }
+  .ttime { font-family:var(--mono);font-size:10px;color:var(--muted);white-space:nowrap; }
+
+  /* ── Badges ── */
+  .badge {
+    display:inline-block;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+    padding:2px 8px;border-radius:20px;
+  }
+  .b-buy       {background:rgba(0,230,118,.1);color:#00e676;}
+  .b-track     {background:rgba(0,212,255,.1);color:#00d4ff;}
+  .b-cancel    {background:rgba(255,77,109,.1);color:#ff4d6d;}
+  .b-return    {background:rgba(255,171,64,.1);color:#ffab40;}
+  .b-complaint {background:rgba(255,77,109,.1);color:#ff4d6d;}
+  .b-feedback  {background:rgba(167,139,250,.1);color:#a78bfa;}
+  .b-call      {background:rgba(0,230,118,.1);color:#00e676;}
+  .b-positive  {background:rgba(0,230,118,.1);color:#00e676;}
+  .b-negative  {background:rgba(255,77,109,.1);color:#ff4d6d;}
+  .b-neutral   {background:rgba(90,106,128,.15);color:#8895a8;}
+  .b-low    {background:rgba(0,230,118,.1);color:#00e676;}
+  .b-medium {background:rgba(255,171,64,.1);color:#ffab40;}
+  .b-high   {background:rgba(255,77,109,.1);color:#ff4d6d;}
+  .b-open   {background:rgba(0,212,255,.1);color:#00d4ff;}
+  .b-scheduled{background:rgba(0,212,255,.1);color:#00d4ff;}
+
+  /* ── Loading ── */
+  #loading {
+    position:fixed;inset:0;background:var(--bg);
+    display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;
+    z-index:999;transition:opacity .4s;
+  }
+  #loading.gone { opacity:0;pointer-events:none; }
+  .spin { width:38px;height:38px;border:3px solid var(--b2);border-top-color:var(--cyan);border-radius:50%;animation:spin .7s linear infinite; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .loading-txt { font-size:13px;color:var(--muted); }
+
+  /* ── Sentiment trend bars ── */
+  .sent-bars { display:flex;flex-direction:column;gap:10px;margin-top:4px; }
+  .sent-row { display:flex;align-items:center;gap:12px; }
+  .sent-label { font-size:12px;font-weight:600;width:70px;text-transform:capitalize; }
+  .sent-track { flex:1;height:10px;background:var(--b1);border-radius:5px;overflow:hidden; }
+  .sent-fill  { height:100%;border-radius:5px;transition:width .9s cubic-bezier(.34,1.56,.64,1); }
+  .sf-positive { background:var(--green); }
+  .sf-negative { background:var(--red); }
+  .sf-neutral  { background:var(--muted); }
+  .sent-pct { font-size:11.5px;font-weight:700;width:38px;text-align:right; }
+
+  /* ── Rating display ── */
+  .rating-display { display:flex;align-items:center;gap:8px; }
+  .rating-stars { color:#ffab40;font-size:18px; }
+  .rating-val  { font-size:28px;font-weight:800;color:var(--amber); }
+  .rating-sub  { font-size:12px;color:var(--muted); }
+
+  /* ── Slot breakdown ── */
+  .slot-list { display:flex;flex-direction:column;gap:8px; }
+  .slot-row  { display:flex;align-items:center;gap:10px; }
+  .slot-time { font-size:12px;font-weight:500;width:180px;flex-shrink:0; }
+  .slot-bar  { flex:1;height:8px;background:var(--b1);border-radius:4px;overflow:hidden; }
+  .slot-fill { height:100%;border-radius:4px;background:linear-gradient(90deg,var(--cyan),#0050ff);
+    transition:width .8s cubic-bezier(.34,1.56,.64,1); }
+  .slot-cnt  { font-size:11px;color:var(--muted);width:28px;text-align:right; }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:none} }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spin"></div>
+  <div class="loading-txt">Loading analytics…</div>
+</div>
+
+<!-- Topbar -->
+<div class="topbar">
+  <div class="tlogo"><span class="tlogo-icon">👟</span> NexaShoe</div>
+  <div class="tsep"></div>
+  <div class="tpage">Admin Analytics</div>
+  <div class="tright">
+    <span class="ts" id="ts">—</span>
+    <button class="tbtn" onclick="load()">↻ Refresh</button>
+    <a href="/" class="tlink">← Chat</a>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="page">
+
+  <!-- KPIs -->
+  <div class="sh">Overview</div>
+  <div class="kgrid">
+    <div class="kcard kc-cyan"><div class="k-icon">💬</div><div class="k-label">Total Chats</div><div class="k-value" id="kChats">—</div><div class="k-sub">All interactions</div></div>
+    <div class="kcard kc-red"><div class="k-icon">⚠️</div><div class="k-label">Complaints</div><div class="k-value" id="kComplaints">—</div><div class="k-sub">Logged issues</div></div>
+    <div class="kcard kc-green"><div class="k-icon">💬</div><div class="k-label">Feedback</div><div class="k-value" id="kFeedback">—</div><div class="k-sub">Reviews received</div></div>
+    <div class="kcard kc-amber"><div class="k-icon">📞</div><div class="k-label">Calls Scheduled</div><div class="k-value" id="kCalls">—</div><div class="k-sub">Agent callbacks</div></div>
+    <div class="kcard kc-purple"><div class="k-icon">⭐</div><div class="k-label">Avg Rating</div><div class="k-value" id="kRating">—</div><div class="k-sub">Out of 5</div></div>
+  </div>
+
+  <!-- Charts row 1: intent, sentiment, churn -->
+  <div class="sh">ML Analytics</div>
+  <div class="crow3">
+    <div class="gc"><h3>🎯 Intent Distribution</h3><div class="ch-wrap"><canvas id="intentChart"></canvas></div></div>
+    <div class="gc"><h3>😊 Complaint Sentiment</h3><div class="ch-wrap"><canvas id="sentimentChart"></canvas></div></div>
+    <div class="gc"><h3>⚡ Churn Risk Distribution</h3><div class="ch-wrap"><canvas id="churnChart"></canvas></div></div>
+  </div>
+
+  <!-- Sentiment trend -->
+  <div class="crow2">
+    <div class="gc">
+      <h3>📈 Sentiment Trend Analysis</h3>
+      <div class="sent-bars" id="sentBars">
+        <div style="color:var(--muted);font-size:12px">No sentiment data yet</div>
+      </div>
+    </div>
+    <div class="gc">
+      <h3>📊 Rating Overview</h3>
+      <div class="rating-display" style="margin-bottom:16px">
+        <div class="rating-val" id="ratingBig">—</div>
+        <div>
+          <div class="rating-stars" id="ratingStars">—</div>
+          <div class="rating-sub">Average product rating</div>
+        </div>
+      </div>
+      <div class="ch-wrap" style="height:160px"><canvas id="ratingChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Churn Risk Detail -->
+  <div class="sh">Churn Risk</div>
+  <div class="gc" style="margin-bottom:24px">
+    <h3>🔥 Session Churn Risk Breakdown</h3>
+    <div class="churn-row" id="churnBars">
+      <div style="color:var(--muted);font-size:12px">No session data yet</div>
+    </div>
+  </div>
+
+  <!-- ML Complaint Clusters -->
+  <div class="sh">Complaint Clustering (Unsupervised ML — KMeans)</div>
+  <div class="cluster-grid" id="clusterGrid" style="margin-bottom:24px">
+    <div style="color:var(--muted);font-size:12px;padding:20px">No complaint data yet</div>
+  </div>
+
+  <!-- Shoe type + Call slots -->
+  <div class="crow2">
+    <div class="gc">
+      <h3>👟 Complaints by Shoe Type</h3>
+      <div class="ch-wrap"><canvas id="shoeChart"></canvas></div>
+    </div>
+    <div class="gc">
+      <h3>📞 Call Slot Demand</h3>
+      <div class="slot-list" id="slotList">
+        <div style="color:var(--muted);font-size:12px">No calls scheduled yet</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Insights & Recommendations -->
+  <div class="sh">AI-Powered Insights</div>
+  <div class="crow2" style="margin-bottom:24px">
+    <div class="gc">
+      <h3>🧠 Smart Insights</h3>
+      <div class="insight-list" id="insightList">
+        <div style="color:var(--muted);font-size:12px">Loading insights…</div>
+      </div>
+    </div>
+    <div class="gc">
+      <h3>💡 Recommendations</h3>
+      <div class="rec-list" id="recList">
+        <div style="color:var(--muted);font-size:12px">Loading recommendations…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div class="sh">Alerts</div>
+  <div id="alertsSection" style="margin-bottom:24px">
+    <div class="insight-list" id="alertList">
+      <div style="color:var(--muted);font-size:12px">No active alerts</div>
+    </div>
+  </div>
+
+  <!-- Recent tables -->
+  <div class="sh">Recent Activity</div>
+  <div class="crow2">
+    <div class="gc">
+      <h3>💬 Recent Chats</h3>
+      <div id="chatsTable"><div style="color:var(--muted);font-size:12px;padding:16px;text-align:center">No chats yet</div></div>
+    </div>
+    <div class="gc">
+      <h3>⚠️ Recent Complaints</h3>
+      <div id="complaintsTable"><div style="color:var(--muted);font-size:12px;padding:16px;text-align:center">No complaints yet</div></div>
+    </div>
+  </div>
+
+  <div class="crow2" style="margin-top:12px">
+    <div class="gc">
+      <h3>📞 Scheduled Calls</h3>
+      <div id="callsTable"><div style="color:var(--muted);font-size:12px;padding:16px;text-align:center">No calls yet</div></div>
+    </div>
+    <div class="gc">
+      <h3>💬 Recent Feedback</h3>
+      <div id="feedbackTable"><div style="color:var(--muted);font-size:12px;padding:16px;text-align:center">No feedback yet</div></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+Chart.defaults.color       = '#5a6a80';
+Chart.defaults.borderColor = '#1e2a3a';
+Chart.defaults.font.family = "'Outfit', sans-serif";
+Chart.defaults.font.size   = 11;
+
+const COLORS = {
+  buy:'#00e676',track:'#00d4ff',cancel:'#ff4d6d',return:'#ffab40',
+  complaint:'#ff4d6d',feedback:'#a78bfa',call:'#00e676',
+  positive:'#00e676',negative:'#ff4d6d',neutral:'#8895a8',
+  low:'#00e676',medium:'#ffab40',high:'#ff4d6d',
+};
+
+let charts = {};
+
+function mkDoughnut(id, labels, values, colorFn) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return null;
+  const cols = labels.map(colorFn);
+  const ch = new Chart(ctx.getContext('2d'), {
+    type:'doughnut',
+    data:{ labels, datasets:[{data:values,backgroundColor:cols,borderWidth:2,borderColor:'#141b26',hoverOffset:5}] },
+    options:{
+      cutout:'64%',
+      plugins:{
+        legend:{ position:'bottom', labels:{ padding:10,boxWidth:10,boxHeight:10 } },
+        tooltip:{ callbacks:{ label: c => ` ${c.label}: ${c.parsed}` } },
+      },
+      animation:{ animateRotate:true, duration:800 },
+    },
+  });
+  return ch;
+}
+
+function mkBar(id, labels, values, color='#00d4ff') {
+  const ctx = document.getElementById(id);
+  if (!ctx) return null;
+  return new Chart(ctx.getContext('2d'), {
+    type:'bar',
+    data:{
+      labels,
+      datasets:[{ data:values, backgroundColor:color, borderRadius:6, borderSkipped:false }],
+    },
+    options:{
+      indexAxis:'y',
+      plugins:{ legend:{ display:false } },
+      scales:{
+        x:{ grid:{ color:'rgba(255,255,255,.04)' }, ticks:{ stepSize:1 } },
+        y:{ grid:{ display:false } },
+      },
+      animation:{ duration:700 },
+    },
+  });
+}
+
+function updateChart(ch, labels, vals, colorFn) {
+  if (!ch) return;
+  ch.data.labels = labels;
+  ch.data.datasets[0].data = vals;
+  if (colorFn) ch.data.datasets[0].backgroundColor = labels.map(colorFn);
+  ch.update('active');
+}
+
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const fmtTime = ts => { try{ return new Date(ts+' UTC').toLocaleString(); }catch{ return ts||'—'; } };
+const badge = (cls,txt) => `<span class="badge b-${esc(cls)}">${esc(txt)}</span>`;
+const stars = n => n ? '⭐'.repeat(Math.round(n)) : '—';
+
+async function load() {
+  try {
+    const r = await fetch('/admin');
+    const d = await r.json();
+    render(d);
+  } catch(e) { console.error(e); }
+}
+
+function render(d) {
+  // KPIs
+  document.getElementById('kChats').textContent      = d.total_chats ?? '—';
+  document.getElementById('kComplaints').textContent  = d.total_complaints ?? '—';
+  document.getElementById('kFeedback').textContent    = d.total_feedback ?? '—';
+  document.getElementById('kCalls').textContent       = d.total_calls ?? '—';
+  const avg = d.avg_feedback_rating ? parseFloat(d.avg_feedback_rating).toFixed(1) : '—';
+  document.getElementById('kRating').textContent = avg;
+  document.getElementById('ratingBig').textContent  = avg;
+  document.getElementById('ratingStars').textContent = avg !== '—' ? stars(avg) : '—';
+
+  // Intent chart
+  const il = (d.intent_distribution||[]).map(x=>x.intent);
+  const iv = (d.intent_distribution||[]).map(x=>x.cnt);
+  if (!charts.intent) charts.intent = mkDoughnut('intentChart', il, iv, l=>COLORS[l]||'#888');
+  else updateChart(charts.intent, il, iv, l=>COLORS[l]||'#888');
+
+  // Sentiment chart
+  const sl = (d.sentiment_distribution||[]).map(x=>x.label);
+  const sv = (d.sentiment_distribution||[]).map(x=>x.cnt);
+  if (!charts.sent) charts.sent = mkDoughnut('sentimentChart', sl, sv, l=>COLORS[l]||'#888');
+  else updateChart(charts.sent, sl, sv, l=>COLORS[l]||'#888');
+
+  // Churn chart
+  const cd = d.churn_distribution || {};
+  const cl = Object.keys(cd), cv = Object.values(cd);
+  if (!charts.churn) charts.churn = mkDoughnut('churnChart', cl, cv, l=>COLORS[l]||'#888');
+  else updateChart(charts.churn, cl, cv, l=>COLORS[l]||'#888');
+
+  // Shoe type bar
+  const stl = (d.shoe_type_distribution||[]).map(x=>x.shoe_type);
+  const stv = (d.shoe_type_distribution||[]).map(x=>x.cnt);
+  if (!charts.shoe) charts.shoe = mkBar('shoeChart', stl, stv, '#ff4d6d');
+  else { charts.shoe.data.labels=stl; charts.shoe.data.datasets[0].data=stv; charts.shoe.update('active'); }
+
+  // Sentiment trend bars
+  const sentBars = document.getElementById('sentBars');
+  const total = sv.reduce((a,b)=>a+b,0) || 1;
+  if (sl.length) {
+    sentBars.innerHTML = sl.map((l,i)=>{
+      const pct = Math.round((sv[i]/total)*100);
+      return `<div class="sent-row">
+        <span class="sent-label">${esc(l)}</span>
+        <div class="sent-track"><div class="sent-fill sf-${esc(l)}" style="width:${pct}%"></div></div>
+        <span class="sent-pct" style="color:${COLORS[l]||'#888'}">${pct}%</span>
+      </div>`;
+    }).join('');
+  }
+
+  // Rating chart
+  const feedbackRaw = d.recent_feedback || [];
+  if (feedbackRaw.length) {
+    const ratingBuckets = {1:0,2:0,3:0,4:0,5:0};
+    feedbackRaw.forEach(f => { if(f.rating) ratingBuckets[f.rating]=(ratingBuckets[f.rating]||0)+1; });
+    const rl = Object.keys(ratingBuckets).map(k=>`${k}★`);
+    const rv = Object.values(ratingBuckets);
+    if (!charts.rating) charts.rating = mkBar('ratingChart', rl, rv, '#ffab40');
+    else { charts.rating.data.labels=rl; charts.rating.data.datasets[0].data=rv; charts.rating.update('active'); }
+  }
+
+  // Churn risk bars
+  const totalSess = Object.values(cd).reduce((a,b)=>a+b,0) || 1;
+  const churnBars = document.getElementById('churnBars');
+  if (cl.length) {
+    churnBars.innerHTML = ['low','medium','high'].map(risk=>{
+      const cnt = cd[risk]||0;
+      const pct = Math.round((cnt/totalSess)*100);
+      return `<div class="churn-seg">
+        <div class="cs-head">
+          <span class="cs-label" style="color:${COLORS[risk]}">${risk}</span>
+          <span class="cs-count" style="color:${COLORS[risk]}">${cnt}</span>
+        </div>
+        <div class="cs-bar"><div class="cs-fill cf-${risk}" style="width:${pct}%"></div></div>
+        <span class="cs-pct">${pct}% of all sessions</span>
+      </div>`;
+    }).join('');
+  }
+
+  // Complaint clusters
+  const clusters = d.complaint_clusters || {};
+  const clusterGrid = document.getElementById('clusterGrid');
+  const ckeys = Object.keys(clusters);
+  if (ckeys.length && Object.values(clusters).some(c=>c.count>0)) {
+    clusterGrid.innerHTML = ckeys.map(k=>{
+      const c = clusters[k];
+      const samples = (c.samples||[]).slice(0,3);
+      return `<div class="cluster-card">
+        <div class="cc-head">
+          <div class="cc-icon">${esc(c.icon||'📌')}</div>
+          <div class="cc-name">${esc(c.name)}</div>
+        </div>
+        <div class="cc-count">${c.count}</div>
+        <div class="cc-sub">complaints in this category</div>
+        ${samples.length?`<div class="cc-samples">${samples.map(s=>`<div class="cc-sample">· ${esc(s)}</div>`).join('')}</div>`:''}
+      </div>`;
+    }).join('');
+  } else {
+    clusterGrid.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:20px">No complaint data available for clustering yet</div>';
+  }
+
+  // Call slots
+  const slots = d.slot_distribution || [];
+  const slotList = document.getElementById('slotList');
+  if (slots.length) {
+    const maxSlot = Math.max(...slots.map(s=>s.cnt));
+    slotList.innerHTML = slots.map(s=>{
+      const pct = Math.round((s.cnt/maxSlot)*100);
+      return `<div class="slot-row">
+        <span class="slot-time">${esc(s.time_slot)}</span>
+        <div class="slot-bar"><div class="slot-fill" style="width:${pct}%"></div></div>
+        <span class="slot-cnt">${s.cnt}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // Insights
+  const insights = d.insights || {};
+  const insightList = document.getElementById('insightList');
+  if ((insights.insights||[]).length) {
+    insightList.innerHTML = insights.insights.map(i=>
+      `<div class="insight-item">${esc(i)}</div>`
+    ).join('');
+  }
+
+  const recList = document.getElementById('recList');
+  if ((insights.recommendations||[]).length) {
+    recList.innerHTML = insights.recommendations.map(r=>
+      `<div class="rec-item">${esc(r)}</div>`
+    ).join('');
+  }
+
+  const alertList = document.getElementById('alertList');
+  if ((insights.alerts||[]).length) {
+    alertList.innerHTML = insights.alerts.map(a=>
+      `<div class="insight-item alert">🚨 ${esc(a)}</div>`
+    ).join('');
+  } else {
+    alertList.innerHTML = '<div class="insight-item" style="color:var(--green)">✅ No active alerts — system is operating normally</div>';
+  }
+
+  // Recent chats table
+  const chatsEl = document.getElementById('chatsTable');
+  if ((d.recent_chats||[]).length) {
+    chatsEl.innerHTML = `<table>
+      <thead><tr><th>Session</th><th>Message</th><th>Intent</th><th>Time</th></tr></thead>
+      <tbody>${(d.recent_chats||[]).map(c=>`<tr>
+        <td class="tmono">${esc((c.session_id||'').slice(0,8))}</td>
+        <td class="cell-trunc" title="${esc(c.message)}">${esc(c.message)}</td>
+        <td>${c.intent?badge(c.intent,c.intent):'—'}</td>
+        <td class="ttime">${fmtTime(c.created_at)}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  }
+
+  // Complaints table
+  const compEl = document.getElementById('complaintsTable');
+  if ((d.recent_complaints||[]).length) {
+    compEl.innerHTML = `<table>
+      <thead><tr><th>Shoe Type</th><th>Issue</th><th>Sentiment</th><th>Time</th></tr></thead>
+      <tbody>${(d.recent_complaints||[]).map(c=>`<tr>
+        <td>${esc(c.shoe_type||'—')}</td>
+        <td class="cell-trunc" title="${esc(c.issue)}">${esc(c.issue||'—')}</td>
+        <td>${c.sentiment?badge(c.sentiment,c.sentiment):'—'}</td>
+        <td class="ttime">${fmtTime(c.created_at)}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  }
+
+  // Calls table
+  const callsEl = document.getElementById('callsTable');
+  if ((d.recent_calls||[]).length) {
+    callsEl.innerHTML = `<table>
+      <thead><tr><th>Session</th><th>Time Slot</th><th>Status</th><th>Scheduled</th></tr></thead>
+      <tbody>${(d.recent_calls||[]).map(c=>`<tr>
+        <td class="tmono">${esc((c.session_id||'').slice(0,8))}</td>
+        <td>${esc(c.time_slot||'—')}</td>
+        <td>${badge('scheduled',c.status||'scheduled')}</td>
+        <td class="ttime">${fmtTime(c.created_at)}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  }
+
+  // Feedback table
+  const fbEl = document.getElementById('feedbackTable');
+  if ((d.recent_feedback||[]).length) {
+    fbEl.innerHTML = `<table>
+      <thead><tr><th>Product</th><th>Rating</th><th>Comment</th><th>Time</th></tr></thead>
+      <tbody>${(d.recent_feedback||[]).map(f=>`<tr>
+        <td>${esc(f.product||'—')}</td>
+        <td style="color:#ffab40">${'⭐'.repeat(f.rating||0)}</td>
+        <td class="cell-trunc" title="${esc(f.comment)}">${esc(f.comment||'—')}</td>
+        <td class="ttime">${fmtTime(f.created_at)}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  }
+
+  document.getElementById('ts').textContent = 'Updated ' + new Date().toLocaleTimeString();
+  document.getElementById('loading').classList.add('gone');
+}
+
+load();
+setInterval(load, 30000);
+</script>
+</body>
+</html>
